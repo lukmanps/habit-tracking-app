@@ -8,6 +8,7 @@ import { useStore } from "@/lib/store";
 import { clsx } from "clsx";
 import { HABIT_COLORS } from "@/lib/constants";
 import { Check, Bell, Clock } from "lucide-react";
+import { requestNotificationPermission } from "@/lib/notifications";
 
 const DAYS = [
     { label: "S", value: 0 },
@@ -162,7 +163,18 @@ export default function AddHabitPage() {
                         </label>
                         <button
                             type="button"
-                            onClick={() => setHasReminder(!hasReminder)}
+                            onClick={async () => {
+                                if (!hasReminder) {
+                                    const permission = await requestNotificationPermission();
+                                    if (permission === "granted") {
+                                        setHasReminder(true);
+                                    } else {
+                                        alert("Notification permission is required to set reminders.");
+                                    }
+                                } else {
+                                    setHasReminder(false);
+                                }
+                            }}
                             className={clsx(
                                 "w-12 h-6 rounded-full relative transition-colors duration-300",
                                 hasReminder ? "bg-neutral-900 dark:bg-white" : "bg-neutral-200 dark:bg-neutral-700"

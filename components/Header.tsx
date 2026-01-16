@@ -7,13 +7,16 @@ interface HeaderProps {
     title?: string;
     showBack?: boolean;
     showSettings?: boolean;
+    leftAction?: React.ReactNode;
     rightAction?: React.ReactNode;
 }
 
-export default function Header({ title, showBack, showSettings, rightAction }: HeaderProps) {
+export default function Header({ title, showBack, showSettings, leftAction, rightAction }: HeaderProps) {
     return (
         <header className="flex items-center justify-between p-4 bg-white dark:bg-neutral-950 sticky top-0 z-10 transition-colors">
-            {showBack ? (
+            {leftAction ? (
+                <div className="-ml-2">{leftAction}</div>
+            ) : showBack ? (
                 <Link href="/" className="p-2 -ml-2 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-full transition-colors">
                     <ArrowLeft size={24} />
                 </Link>

@@ -9,6 +9,8 @@ import { calculateStreak, formatDateKey, isScheduledDay, cn } from "@/lib/utils"
 import Header from "@/components/Header";
 import PageLayout from "@/components/PageLayout";
 import { HABIT_COLORS } from "@/lib/constants";
+import { Bell, Clock } from "lucide-react";
+import { requestNotificationPermission } from "@/lib/notifications";
 
 export default function HabitDetailPage() {
     const router = useRouter();
@@ -22,6 +24,8 @@ export default function HabitDetailPage() {
     // Local state for editing
     const [editName, setEditName] = useState("");
     const [editColor, setEditColor] = useState("");
+    const [hasReminder, setHasReminder] = useState(false);
+    const [reminderTime, setReminderTime] = useState("09:00");
     const [historyView, setHistoryView] = useState<'week' | 'month'>('week');
 
     const habit = habits.find((h) => h.id === id);
@@ -31,6 +35,8 @@ export default function HabitDetailPage() {
         if (habit) {
             setEditName(habit.name);
             setEditColor(habit.color);
+            setHasReminder(!!habit.reminderTime);
+            setReminderTime(habit.reminderTime || "09:00");
         }
     }, [habit]);
 
@@ -57,7 +63,11 @@ export default function HabitDetailPage() {
 
     const handleSave = () => {
         if (editName.trim()) {
-            updateHabit(id, { name: editName, color: editColor });
+            updateHabit(id, {
+                name: editName,
+                color: editColor,
+                reminderTime: hasReminder ? reminderTime : undefined
+            });
         }
         setIsEditing(false);
     };
@@ -122,12 +132,20 @@ export default function HabitDetailPage() {
             <Header
                 title={isEditing ? "Edit Habit" : habit.name}
                 showBack={!isEditing}
+                leftAction={isEditing ? (
+                    <button
+                        onClick={handleCancel}
+                        className="p-2 text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900 rounded-full transition-colors"
+                    >
+                        <X size={24} />
+                    </button>
+                ) : undefined}
                 rightAction={
                     <button
                         onClick={isEditing ? handleSave : () => setIsEditing(true)}
                         className={cn(
                             "p-2 rounded-full transition-colors font-medium text-sm flex items-center gap-1",
-                            isEditing ? "bg-neutral-900 text-white px-4" : "text-neutral-500 hover:bg-neutral-50"
+                            isEditing ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-4" : "text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-900"
                         )}
                     >
                         {isEditing ? (
@@ -144,32 +162,13 @@ export default function HabitDetailPage() {
                 This absolute element needs to be inside PageLayout or consistent.
                 Currently it was outside the scroll container. PageLayout wraps everything.
             */}
-            {isEditing && (
-                <div className="absolute top-20 left-4 z-20">
-                    {/* Adjusted top because header is part of layout now? 
-                        Wait, Header is in fixed top slot. 
-                        Top-4 in absolute relative to PageLayout will be near top.
-                        But Header has z-10. 
-                        If we want it over the header? Or below it?
-                        Original was absolute top-4 left-4.
-                        With PageLayout, 'bg-white relative' is the container.
-                        So absolute top-4 works.
-                    */}
-                    <button
-                        onClick={handleCancel}
-                        className="p-2 -ml-2 text-neutral-500 hover:bg-neutral-50 rounded-full transition-colors"
-                    >
-                        <X size={24} />
-                    </button>
-                </div>
-            )}
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-hidden">
 
                 {isEditing && (
-                    <div className="p-4 space-y-3 fade-in-section">
+                    <div className="p-4 space-y-3 fade-in-section overflow-hidden">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Name</label>
+                            <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Name</label>
                             <input
                                 type="text"
                                 value={editName}
@@ -179,11 +178,12 @@ export default function HabitDetailPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Color</label>
-                            <div className="flex flex-wrap gap-3">
+                            <label className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Color</label>
+                            <div className="flex flex-wrap gap-3 mt-2">
                                 {HABIT_COLORS.map((c) => (
                                     <button
                                         key={c.value}
+                                        type="button"
                                         onClick={() => setEditColor(c.value)}
                                         className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-sm"
                                         style={{ backgroundColor: c.value }}
@@ -193,13 +193,56 @@ export default function HabitDetailPage() {
                                 ))}
                             </div>
                         </div>
+
+                        {/* Reminder Section */}
+                        <div className="space-y-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+                                    <Bell size={14} /> Set Reminder
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        if (!hasReminder) {
+                                            const permission = await requestNotificationPermission();
+                                            if (permission === "granted") {
+                                                setHasReminder(true);
+                                            } else {
+                                                alert("Notification permission is required to set reminders.");
+                                            }
+                                        } else {
+                                            setHasReminder(false);
+                                        }
+                                    }}
+                                    className={cn(
+                                        "w-12 h-6 rounded-full relative transition-colors duration-300",
+                                        hasReminder ? "bg-neutral-900 dark:bg-white" : "bg-neutral-200 dark:bg-neutral-700"
+                                    )}
+                                >
+                                    <div className={cn(
+                                        "absolute top-1 left-1 bg-white dark:bg-neutral-900 w-4 h-4 rounded-full transition-transform duration-300",
+                                        hasReminder ? "translate-x-6" : ""
+                                    )} />
+                                </button>
+                            </div>
+
+                            <div className={cn(
+                                "overflow-hidden transition-all duration-300 ease-in-out",
+                                hasReminder ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+                            )}>
+                                <div className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded-xl flex items-center gap-4 border border-neutral-100 dark:border-neutral-800 transition-colors">
+                                    <Clock size={20} className="text-neutral-400" />
+                                    <input
+                                        type="time"
+                                        value={reminderTime}
+                                        onChange={(e) => setReminderTime(e.target.value)}
+                                        className="bg-transparent text-lg font-bold text-neutral-900 dark:text-white focus:outline-none w-full"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
-
-                {/* Stats Card (Hide if editing? Or keep? Maybe keep for context, but usually edit mode is tailored. Let's keep it but maybe below?) 
-            Prompt doesn't say. But if I edit name/color, I might not need stats. 
-            However, editing history IS part of edit mode. So I need history view.
-        */}
                 {!isEditing && (
                     <div className="p-6 grid grid-cols-2 gap-4">
                         <div className="bg-neutral-50 dark:bg-neutral-900 p-6 rounded-3xl flex flex-col items-center justify-center text-center border border-neutral-100 dark:border-neutral-800 transition-colors">
@@ -242,7 +285,7 @@ export default function HabitDetailPage() {
                 {/* Last 7 Days View */}
                 {historyView === 'week' && (
                     <div className="px-4 py-4">
-                        {isEditing && <h3 className="text-sm font-bold text-neutral-900 mb-2">Edit History (7d)</h3>}
+                        {/* {isEditing && <h3 className="text-sm font-bold text-neutral-900 mb-2">Edit History (7d)</h3>} */}
 
                         <div className="flex justify-between items-end">
                             {last7Days.map(date => renderDayCell(date, 'week'))}
@@ -252,12 +295,12 @@ export default function HabitDetailPage() {
 
                 {/* Last 30 Days View */}
                 {historyView === 'month' && (
-                    <div className="px-4 py-4 pb-20">
-                        {isEditing && (
-                            <h3 className="text-sm font-bold text-neutral-900 mb-2 flex items-center gap-2">
-                                <Calendar size={20} className="text-neutral-400" /> Edit History (30d)
+                    <div className="px-4 py-4 pb-20 mb-4">
+                        {/* {isEditing && (
+                            <h3 className="text-xs font-semibold text-neutral-900 mb-4 flex items-center gap-2 ">
+                                <Calendar size={16} className="text-neutral-400" /> Edit History (30d)
                             </h3>
-                        )}
+                        )} */}
                         <div className="grid grid-cols-7 gap-y-4 gap-x-2">
                             {last30Days.map(date => renderDayCell(date, 'month'))}
                         </div>
@@ -266,10 +309,10 @@ export default function HabitDetailPage() {
             </div>
 
             {isEditing && (
-                <div className="p-4 mt-auto border-t border-neutral-100 bg-white fade-in-section">
+                <div className="p-2 mt-auto border-t border-neutral-100 bg-white fade-in-section">
                     <button
                         onClick={handleDelete}
-                        className="w-full flex items-center justify-center gap-2 text-red-500 font-medium py-3 hover:bg-red-50 rounded-xl transition-colors"
+                        className="w-full flex items-center justify-center gap-2 text-red-500 font-medium pt-2 hover:bg-red-50 rounded-xl transition-colors"
                     >
                         <Trash2 size={20} />
                         Delete Habit

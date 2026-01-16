@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Anek_Latin } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import NotificationManager from "@/components/NotificationManager";
 
 const anekLatin = Anek_Latin({
   subsets: ["latin"],
@@ -29,6 +30,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
+          <NotificationManager />
           <main className="mx-auto max-w-2xl min-h-screen bg-white dark:bg-neutral-950 relative shadow-2xl shadow-neutral-200/50 dark:shadow-none transition-colors">
             {children}
           </main>
