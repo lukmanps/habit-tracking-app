@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Anek_Latin } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -7,13 +7,26 @@ import NotificationManager from "@/components/NotificationManager";
 const anekLatin = Anek_Latin({
   subsets: ["latin"],
   variable: "--font-anek-latin",
-
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#ffffff",
+};
 
 export const metadata: Metadata = {
   title: "Habit Tracker",
   description: "Distraction-free habit tracker",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Habit Tracker",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({
